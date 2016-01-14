@@ -269,9 +269,9 @@ public class GradebookServiceHibernateImpl extends BaseHibernateManager implemen
 				gradeDef.setGradeEntryType(gradebook.getGrade_type());
 				gradeDef.setGradeReleased(assignment.isReleased());
 				
-				// If this is the student, then the assignment needs to have
+				// If this is the student, then the global setting needs to be enabled and the assignment needs to have
 				// been released. Return null score information if not released
-				if (studentRequestingOwnScore && !assignment.isReleased()) {
+				if (studentRequestingOwnScore && (!gradebook.isAssignmentsDisplayed() || !assignment.isReleased())) {
 					gradeDef.setDateRecorded(null);
 					gradeDef.setGrade(null);
 					gradeDef.setGraderUid(null);
@@ -1647,9 +1647,7 @@ public class GradebookServiceHibernateImpl extends BaseHibernateManager implemen
 				  } else if (gradebook.getGrade_type() == GradebookService.GRADE_TYPE_PERCENTAGE) {
 					  convertPointsToPercentage(gradebook, gradeRecs);
 				  }
-				  
-				  boolean gradeReleased = gradebook.isAssignmentsDisplayed() && gbItem.isReleased();
-				  
+				  				  
 				  for (Iterator gradeIter = gradeRecs.iterator(); gradeIter.hasNext();) {
 					  AssignmentGradeRecord agr = (AssignmentGradeRecord) gradeIter.next();
 					  if (agr != null) {
@@ -2926,8 +2924,9 @@ public class GradebookServiceHibernateImpl extends BaseHibernateManager implemen
 		try {
 			Gradebook gradebook = getGradebook(gradebookUid);
 	
-			//if not released, don't do any work
-			if(!gradebook.isCourseGradeDisplayed()){
+			//if not released, and not instructor or TA, don't do any work
+			//note that this will return a course grade for Instructor and TA even if not released, see SAK-30119
+			if(!gradebook.isCourseGradeDisplayed() && (!currentUserHasEditPerm(gradebookUid) || !currentUserHasGradingPerm(gradebookUid))){
 				return rval;
 			}
 						
@@ -3012,6 +3011,22 @@ public class GradebookServiceHibernateImpl extends BaseHibernateManager implemen
 		
 		List<CategoryDefinition> newCategoryDefinitions = gbInfo.getCategories();
 		
+		//if we have categories and they are weighted, check the weightings sum up to 100% (or 1 since it's a fraction)
+		if(gradebook.getCategory_type() == GradebookService.CATEGORY_TYPE_WEIGHTED_CATEGORY) {
+			double totalWeight = 0;
+			for(CategoryDefinition newDef: newCategoryDefinitions) {
+				
+				if(newDef.getWeight() == null) {
+					throw new IllegalArgumentException("No weight specified for a category, but weightings enabled");
+				}
+				
+				totalWeight += newDef.getWeight();
+			}
+			if(Math.rint(totalWeight) != 1) {
+				throw new IllegalArgumentException("Weightings for the categories do not equal 100%");
+			}
+		}
+		
 		//get current categories and build a mapping list of Category.id to Category
 		List<Category> currentCategories = this.getCategories(gradebook.getId());
 		Map<Long,Category> currentCategoryMap = new HashMap<>();
@@ -3025,6 +3040,15 @@ public class GradebookServiceHibernateImpl extends BaseHibernateManager implemen
 		//If category has an ID it is to be updated. Update and remove from currentCategoryMap.
 		//Any categories remaining in currentCategoryMap are to be removed.
 		for(CategoryDefinition newDef: newCategoryDefinitions) {
+			
+			//preprocessing and validation
+			//Rule 1: If category has no name, it is to be removed/skipped
+			//Note that we no longer set weights to 0 even if unweighted category type selected. The weights are not considered if its not a weighted category type
+			//so this allows us to switch back and forth between types without losing information
+			
+			if(StringUtils.isBlank(newDef.getName())) {
+				continue;
+			}
 			
 			//new
 			if(newDef.getId() == null) {

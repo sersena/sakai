@@ -7,12 +7,12 @@
 	<div class="panel panel-default">
 		<div class="panel-heading" role="tab" id="settingsGradeReleaseHeader">
 			<h3 class="panel-title">
-				<a role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#settingsGradeRelease" aria-expanded="false" aria-controls="settingsGradeRelease">
+				<a role="button" data-toggle="collapse" href="#settingsGradeRelease" aria-expanded="false" aria-controls="settingsGradeRelease">
 					<wicket:message key="settingspage.graderelease.heading">Grade Release Rules</wicket:message>
 				</a>
 			</h3>
 		</div>
-		<div id="settingsGradeRelease" class="panel-collapse collapse" role="tabpanel" aria-labelledby="settingsGradeReleaseHeader">
+		<div wicket:id="settingsGradeReleasePanel" id="settingsGradeRelease" class="panel-collapse collapse" role="tabpanel" aria-labelledby="settingsGradeReleaseHeader">
 			<div class="panel-body">
 				<div class="checkbox">
 					<label>
@@ -55,6 +55,12 @@
 
 					</div>
 				</div>
+				
+				<div class="form-group" wicket:id="courseGradePreview">
+					<span><wicket:message key="settingspage.displaycoursegrade.preview" /></span>
+					<span class="bg-info" wicket:id="preview">X+ 99%</span>
+				</div>
+				
 			</div>
 		</div>
 	</div>

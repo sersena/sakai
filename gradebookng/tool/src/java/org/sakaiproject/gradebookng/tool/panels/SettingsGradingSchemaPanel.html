@@ -7,12 +7,12 @@
 	<div class="panel panel-default">
 		<div class="panel-heading" role="tab" id="settingsGradingSchemaHeader">
 			<h3 class="panel-title">
-				<a role="button" data-toggle="collapse" data-parent="#settingsAccordion" href="#settingsGradingSchema" aria-expanded="false" aria-controls="settingsGradingSchema">
+				<a role="button" data-toggle="collapse" href="#settingsGradingSchema" aria-expanded="false" aria-controls="settingsGradingSchema">
 					<wicket:message key="settingspage.gradingschema.heading">Grading Schema</wicket:message>
 				</a>
 			</h3>
 		</div>
-		<div id="settingsGradingSchema" class="panel-collapse collapse" role="tabpanel" aria-labelledby="settingsGradingSchemaHeader">
+		<div wicket:id="settingsGradingSchemaPanel" id="settingsGradingSchema" class="panel-collapse collapse" role="tabpanel" aria-labelledby="settingsGradingSchemaHeader">
 			<div class="panel-body">
 				<div class="form-group">
 					<label for="gradingschemaType"><wicket:message key="settingspage.gradingschema.type" /></label>

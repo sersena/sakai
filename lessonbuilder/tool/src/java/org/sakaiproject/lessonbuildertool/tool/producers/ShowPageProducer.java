@@ -1041,6 +1041,15 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		// swfObject is not currently used
 		boolean shownSwfObject = false;
 
+		long newItemId = -1L;
+		String newItemStr = (String)toolSession.getAttribute("lessonbuilder.newitem");
+		if (newItemStr != null) {
+		    toolSession.removeAttribute("lessonbuilder.newitem");		    
+		    try {
+			newItemId = Long.parseLong(newItemStr);
+		    } catch (Exception e) {}
+		}
+
 		// items to show
 		List<SimplePageItem> itemList = (List<SimplePageItem>) simplePageBean.getItemsOnPage(currentPage.getPageId());
 		
@@ -1189,6 +1198,8 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 				    itemClassName = itemClassName + "  canEdit";
 				}
 
+				if (i.getId() == newItemId)
+				    itemClassName = itemClassName + " newItem";
 
 				tableRow.decorate(new UIFreeAttributeDecorator("class", itemClassName));
 
@@ -2782,9 +2793,25 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		// students an error
 		if (!anyItemVisible) {
 			if (canEditPage) {
+				String helpUrl = null;
+				// order:
+				// localized placedholder
+				// localized general
+				// default placeholder
+				// we know the defaults exist because we include them, so
+				// we never need to consider default general
+				if (currentPage.getOwner() != null)
+				    helpUrl = getLocalizedURL("student.html", true);
+				else {
+				    helpUrl = getLocalizedURL("placeholder.html", false);
+				    if (helpUrl == null)
+					helpUrl = getLocalizedURL("general.html", false);
+				    if (helpUrl == null)
+					helpUrl = getLocalizedURL("placeholder.html", true);
+				}
+
 				UIOutput.make(tofill, "startupHelp")
-				    .decorate(new UIFreeAttributeDecorator("src", 
-					getLocalizedURL((currentPage.getOwner() != null) ? "student.html" : "general.html")))
+				    .decorate(new UIFreeAttributeDecorator("src", helpUrl))
 				    .decorate(new UIFreeAttributeDecorator("id", "iframe"));
 				if (!iframeJavascriptDone) {
 				    UIOutput.make(tofill, "iframeJavascript");
@@ -3254,7 +3281,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		// right side
 		createToolBarLink(ReorderProducer.VIEW_ID, toolBar, "reorder", "simplepage.reorder", currentPage, "simplepage.reorder-tooltip");
 		UILink.make(toolBar, "help", messageLocator.getMessage("simplepage.help"), 
-			    getLocalizedURL( isStudent ? "student.html" : "general.html"));
+			    getLocalizedURL( isStudent ? "student.html" : "general.html", true));
 
 		// add content menu
 		createToolBarLink(EditPageProducer.VIEW_ID, tofill, "add-text1", null, currentPage, "simplepage.text.tooltip").setItemId(null);
@@ -3262,6 +3289,8 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		createFilePickerToolBarLink(ResourcePickerProducer.VIEW_ID, tofill, "add-multimedia1", null, true, false, currentPage, "simplepage.multimedia.tooltip");
 		UIInternalLink.makeURL(tofill, "subpage-link1", "#").
 		    decorate(new UITooltipDecorator(messageLocator.getMessage("simplepage.subpage-descrip")));
+		UIInternalLink.makeURL(tofill, "addcontent", "#").
+		    decorate(new UITooltipDecorator(messageLocator.getMessage("simplepage.add-item-page")));
 
 		createToolBarLink(EditPageProducer.VIEW_ID, tofill, "add-text", "simplepage.text", currentPage, "simplepage.text.tooltip").setItemId(null);
 		createFilePickerToolBarLink(ResourcePickerProducer.VIEW_ID, tofill, "add-multimedia", "simplepage.multimedia", true, false, currentPage, "simplepage.multimedia.tooltip");
@@ -3552,9 +3581,9 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 	private void createAddMultimediaDialog(UIContainer tofill, SimplePage currentPage) {
 		UIOutput.make(tofill, "add-multimedia-dialog").decorate(new UIFreeAttributeDecorator("title", messageLocator.getMessage("simplepage.resource")));
 		UILink.make(tofill, "mm-additional-instructions", messageLocator.getMessage("simplepage.additional-instructions-label"), 
-			    getLocalizedURL( "multimedia.html"));
+			    getLocalizedURL( "multimedia.html", true));
 		UILink.make(tofill, "mm-additional-website-instructions", messageLocator.getMessage("simplepage.additional-website-instructions-label"), 
-			    getLocalizedURL( "website.html"));
+			    getLocalizedURL( "website.html", true));
 
 		UIForm form = UIForm.make(tofill, "add-multimedia-form");
 		makeCsrf(form, "csrf9");
@@ -4210,7 +4239,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 				.decorate(new UIFreeAttributeDecorator("alt", imageAlt)).decorate(new UITooltipDecorator(imageAlt));
 	}
 
-	private String getLocalizedURL(String fileName) {
+	private String getLocalizedURL(String fileName, boolean useDefault) {
 
 		if (fileName == null || fileName.trim().length() == 0)
 			return fileName;
@@ -4288,7 +4317,11 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 				return localizedPath;
 		}
 
-		return defaultPath;
+		if (useDefault)
+		    return defaultPath;
+
+		// no localized version available
+		return null;
 
 	}
 
